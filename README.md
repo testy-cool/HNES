@@ -76,6 +76,10 @@ Contributing
 ------------
 See `AGENTS.md` for contributor guidelines, build commands, and testing advice tailored to this fork.
 
+Privacy
+-------
+The full privacy policy is available at `docs/privacy-policy.md`. In short, all data stays on your device and exists only to power HNES features.
+
 License
 -------
 MIT License, see LICENSE
