@@ -3,9 +3,9 @@
     "short_name": "HNES",
     "version": "1.6.0.3",
     "description": "Hacker News Enhanced.",
-    "manifest_version": 2,
+    "manifest_version": 3,
     "background": {
-      "scripts": ["background.js"]
+      "service_worker": "background.js"
     },
     "permissions": [
       "storage",
@@ -55,9 +55,25 @@
       }
     ],
     "web_accessible_resources": [
-      "images/spin.gif",
-      "images/unvote.gif",
-      "images/tag.svg",
-      "templates/comment.html"
+      {
+        "resources": [
+          "images/spin.gif",
+          "images/unvote.gif",
+          "images/tag.svg",
+          "templates/comment.html"
+        ],
+        "matches": [
+          "http://news.ycombinator.com/*",
+          "https://news.ycombinator.com/*",
+          "http://news.ycombinator.net/*",
+          "https://news.ycombinator.net/*",
+          "http://news.ycombinator.org/*",
+          "https://news.ycombinator.org/*",
+          "http://hackerne.ws/*",
+          "https://hackerne.ws/*",
+          "http://hckrnews.com/*",
+          "https://hckrnews.com/*"
+        ]
+      }
     ]
 }

@@ -1,41 +1,94 @@
-// Add event listeners
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  console.log('REQUEST', request.method, request)
-  if (request.method == "getAllLocalStorage") {
-    sendResponse({data: localStorage});
-  }
-  else if (request.method == "getLocalStorage") {
-    sendResponse({data: localStorage[request.key]});
-  }
-  else if (request.method == "setLocalStorage") {
-    localStorage[request.key] = request.value;
-    sendResponse({});
-  }
-  else if (request.method == "getUserData") {
-    var data = getUserData(request.usernames);
-    sendResponse({ data: data });
-  }
-  else {
-    sendResponse({});
-  }
-});
+function expireOldEntries() {
+  chrome.storage.local.get(null, items => {
+    const now = Date.now();
+    const keysToRemove = [];
 
-function getUserData(usernames) {
-  var results = {};
-  for (var i = 0; i < usernames.length; i++) {
-    var key = usernames[i],
-        value = localStorage[key];
-    results[key] = value;
-  }
-  return results;
+    Object.keys(items).forEach(key => {
+      const rawValue = items[key];
+      let info = rawValue;
+
+      if (typeof rawValue === 'string') {
+        try {
+          info = JSON.parse(rawValue);
+        } catch (err) {
+          info = null;
+        }
+      }
+
+      if (info && typeof info === 'object' && typeof info.expire === 'number' && now > info.expire) {
+        keysToRemove.push(key);
+      }
+    });
+
+    if (keysToRemove.length) {
+      chrome.storage.local.remove(keysToRemove);
+    }
+  });
 }
 
-//expire old entries
-(function() {
-  for (i=0; i<localStorage.length; i++) {
-    var info = JSON.parse(localStorage[localStorage.key(i)]);
-    var now = new Date().getTime();
-    if (now > info.expire)
-      localStorage.removeItem(localStorage.key(i));
+function handleGetAllLocalStorage(sendResponse) {
+  chrome.storage.local.get(null, items => {
+    sendResponse({ data: items });
+  });
+}
+
+function handleGetLocalStorage(key, sendResponse) {
+  chrome.storage.local.get([key], items => {
+    sendResponse({ data: items[key] });
+  });
+}
+
+function handleSetLocalStorage(key, value, sendResponse) {
+  const toStore = {};
+  toStore[key] = String(value);
+
+  chrome.storage.local.set(toStore, () => {
+    expireOldEntries();
+    sendResponse({});
+  });
+}
+
+function handleGetUserData(usernames, sendResponse) {
+  const keys = Array.isArray(usernames) ? usernames : [];
+
+  chrome.storage.local.get(keys, items => {
+    const results = {};
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      results[key] = items[key];
+    }
+    sendResponse({ data: results });
+  });
+}
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (!request || !request.method) {
+    sendResponse({});
+    return;
   }
+
+  if (request.method === 'getAllLocalStorage') {
+    handleGetAllLocalStorage(sendResponse);
+    return true;
+  }
+
+  if (request.method === 'getLocalStorage') {
+    handleGetLocalStorage(request.key, sendResponse);
+    return true;
+  }
+
+  if (request.method === 'setLocalStorage') {
+    handleSetLocalStorage(request.key, request.value, sendResponse);
+    return true;
+  }
+
+  if (request.method === 'getUserData') {
+    handleGetUserData(request.usernames, sendResponse);
+    return true;
+  }
+
+  sendResponse({});
+  return false;
 });
+
+expireOldEntries();
